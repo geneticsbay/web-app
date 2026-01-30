@@ -47,6 +47,7 @@ export interface Inventory {
   client_id: string;
   client_secret: string;
   subscription_id?: string;
+  app_name?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -87,6 +88,8 @@ export interface Project {
   project_id: string;
   name: string;
   state: string;
+  isNew: boolean;
+  inventory_id?: string;
   userId: string;
   createdAt: string;
   updatedAt: string;
@@ -113,6 +116,8 @@ export interface CreateProjectRequest {
   project_id: string;
   name: string;
   state: string;
+  isNew?: boolean;
+  inventory_id?: string;
 }
 
 export interface ResourceGroup {
@@ -139,6 +144,25 @@ export interface CreateResourceGroupRequest {
   type: string;
   tags: Record<string, string>;
   subscription_id: string;
+}
+
+export interface AddAppToSubscriptionRequest {
+  subscription_id: string;
+}
+
+export interface AddAppToSubscriptionResponse {
+  roleAssignment: {
+    roleAssignmentId: string;
+    roleDefinitionId: string;
+    principalId: string;
+    scope: string;
+  };
+  subscription: {
+    subscriptionId: string;
+    displayName: string;
+    state: string;
+    tenantId: string;
+  };
 }
 
 export const api = {
@@ -232,6 +256,24 @@ export const api = {
     return result.data!;
   },
 
+  getAppRegistrationName: async (token: string): Promise<{ app_name: string; inventoryId: string }> => {
+    const response = await fetch(`${INVENTORY_API_BASE_URL}/me/azure/app-registration`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch app registration name');
+    }
+
+    const result: ApiResponse<{ app_name: string; inventoryId: string }> = await response.json();
+    return result.data!;
+  },
+
   createInventory: async (token: string, inventory: CreateInventoryRequest): Promise<Inventory> => {
     const response = await fetch(`${INVENTORY_API_BASE_URL}/me/cloud-credentials`, {
       method: 'POST',
@@ -249,6 +291,21 @@ export const api = {
 
     const result: ApiResponse<{ inventory: Inventory }> = await response.json();
     return result.data!.inventory;
+  },
+
+  deleteInventory: async (token: string, inventoryId: string): Promise<void> => {
+    const response = await fetch(`${INVENTORY_API_BASE_URL}/me/cloud-credentials/${inventoryId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete credentials');
+    }
   },
 
   validateAzureCredentials: async (token: string, credentials: ValidateCredentialsRequest): Promise<{ 
@@ -315,6 +372,25 @@ export const api = {
     return result.data!.project;
   },
 
+  updateProject: async (token: string, projectId: string, project: CreateProjectRequest): Promise<Project> => {
+    const response = await fetch(`${INVENTORY_API_BASE_URL}/me/projects/${projectId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(project),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update project');
+    }
+
+    const result: ApiResponse<{ project: Project }> = await response.json();
+    return result.data!.project;
+  },
+
   getAzureResourceGroups: async (token: string, subscription_id: string): Promise<{ subscription_id: string; resourceGroups: Array<{ name: string; location: string; type: string; tags: Record<string, string> }>; count: number }> => {
     const response = await fetch(`${INVENTORY_API_BASE_URL}/me/azure/resource-groups`, {
       method: 'POST',
@@ -333,7 +409,43 @@ export const api = {
     const result: ApiResponse<{ subscription_id: string; resourceGroups: Array<{ name: string; location: string; type: string; tags: Record<string, string> }>; count: number }> = await response.json();
     return result.data!;
   },
+  addAppToSubscription: async (token: string, request: AddAppToSubscriptionRequest): Promise<AddAppToSubscriptionResponse> => {
+    const response = await fetch(`${INVENTORY_API_BASE_URL}/me/azure/add-to-subscription`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
 
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to add app to subscription');
+    }
+
+    const result: ApiResponse<AddAppToSubscriptionResponse> = await response.json();
+    return result.data!;
+  },
+
+  addExistingSubscription: async (token: string, request: AddAppToSubscriptionRequest): Promise<{ subscription: { subscriptionId: string; displayName: string; state: string; tenantId: string } }> => {
+    const response = await fetch(`${INVENTORY_API_BASE_URL}/me/azure/add-existing-subscription`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to add subscription');
+    }
+
+    const result: ApiResponse<{ subscription: { subscriptionId: string; displayName: string; state: string; tenantId: string } }> = await response.json();
+    return result.data!;
+  },
   createResourceGroup: async (token: string, resourceGroup: CreateResourceGroupRequest): Promise<ResourceGroup> => {
     const response = await fetch(`${INVENTORY_API_BASE_URL}/me/resource-groups`, {
       method: 'POST',

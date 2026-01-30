@@ -13,7 +13,7 @@ export default function Header({ onNavigate, currentView, onLogout }: HeaderProp
   };
 
   return (
-    <header className="bg-blue-600 text-white p-4 shadow-md">
+    <header className="bg-blue-600 text-white p-4 shadow-md relative z-20">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <button
           onClick={() => onNavigate('home')}

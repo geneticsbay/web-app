@@ -104,7 +104,15 @@ export default function CloudProviderCard({ provider }: CloudProviderCardProps) 
           client_id: '',
           client_secret: '',
         });
-        alert(`${provider.toUpperCase()} credentials saved successfully! Found ${validation.subscriptionCount} subscription(s).`);
+        
+        if (validation.subscriptionCount === 0) {
+          alert(`${provider.toUpperCase()} credentials saved successfully! No subscriptions found. Please check the instructions on the home page.`);
+        } else {
+          alert(`${provider.toUpperCase()} credentials saved successfully! Found ${validation.subscriptionCount} subscription(s).`);
+        }
+        
+        // Redirect to home page
+        window.location.href = '/';
         return;
       } catch (error) {
         setValidationError('Unable to validate credentials. Please check your credentials and try again.');
